@@ -51,6 +51,23 @@ class LiveDataActivity : AppCompatActivity() {
     val filterTestRespeck = IntentFilter(Constants.ACTION_RESPECK_LIVE_BROADCAST)
     val filterTestThingy = IntentFilter(Constants.ACTION_THINGY_BROADCAST)
 
+    val bufferSize = 100
+    val slidingX = mutableListOf<Float>()
+    val slidingY = mutableListOf<Float>()
+    val slidingZ = mutableListOf<Float>()
+
+    private fun updateSlidingWindow(window: MutableList<Float>, value: Float) {
+
+        if (window.size >= bufferSize) {
+            window.removeAt(0) // removes the oldest value
+        }
+        window.add(value)
+    }
+
+    private fun classifyWindow(windowX: List<Float>, windowY: List<Float>, windowZ: List<Float>) {
+        // todo: classifying
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_live_data)
@@ -76,12 +93,23 @@ class LiveDataActivity : AppCompatActivity() {
                     val y = liveData.accelY
                     val z = liveData.accelZ
 
+                    updateSlidingWindow(slidingX, x)
+                    updateSlidingWindow(slidingX, y)
+                    updateSlidingWindow(slidingX, z)
+//
+//                    if (slidingX.size == bufferSize) {
+//                        //call the classidier classifyWindow(slidingX, slidingY, slidingZ)
+//
+//                        //remove the old data or fully reset the buffer according to how much overlap you want to do
+//                    }
                     time += 1
                     updateGraph("respeck", x, y, z)
 
                 }
             }
         }
+
+
 
         // register receiver on another thread
         val handlerThreadRespeck = HandlerThread("bgThreadRespeckLive")
