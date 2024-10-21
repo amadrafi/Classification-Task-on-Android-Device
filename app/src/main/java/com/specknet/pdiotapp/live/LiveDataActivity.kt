@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.res.AssetManager
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Handler
@@ -21,6 +22,13 @@ import com.specknet.pdiotapp.utils.Constants
 import com.specknet.pdiotapp.utils.RESpeckLiveData
 import com.specknet.pdiotapp.utils.ThingyLiveData
 import kotlin.collections.ArrayList
+import org.tensorflow.lite.Interpreter
+import com.opencsv.CSVReader
+import java.io.File
+import java.io.FileInputStream
+import java.io.InputStreamReader
+import java.nio.MappedByteBuffer
+import java.nio.channels.FileChannel
 
 
 class LiveDataActivity : AppCompatActivity() {
@@ -47,6 +55,7 @@ class LiveDataActivity : AppCompatActivity() {
     lateinit var thingyLiveUpdateReceiver: BroadcastReceiver
     lateinit var looperRespeck: Looper
     lateinit var looperThingy: Looper
+    lateinit var interpreter: Interpreter
 
     val filterTestRespeck = IntentFilter(Constants.ACTION_RESPECK_LIVE_BROADCAST)
     val filterTestThingy = IntentFilter(Constants.ACTION_THINGY_BROADCAST)
@@ -56,6 +65,23 @@ class LiveDataActivity : AppCompatActivity() {
         setContentView(R.layout.activity_live_data)
 
         setupCharts()
+
+        // Step 1: Load the TFLite model
+        // Load the TensorFlow Lite model
+        val model = loadModelFile(assets, "model.tflite")
+        interpreter = Interpreter(model)
+
+        Log.d("Model status", "Success")
+
+        // Load and preprocess the CSV data
+        val inputData = loadCSVData(assets, "data.csv")
+
+        // Run inference
+        val output = Array(1) { FloatArray(6) } // Adjust based on your model's output shape
+        interpreter.run(inputData, output)
+
+        // Log the output
+        Log.d("Inference Output", "Output: ${output.contentToString()}")
 
         // set up the broadcast receiver
         respeckLiveUpdateReceiver = object : BroadcastReceiver() {
@@ -125,6 +151,50 @@ class LiveDataActivity : AppCompatActivity() {
 
     }
 
+    private fun loadModelFile(assetManager: AssetManager, modelPath: String): MappedByteBuffer {
+        val fileDescriptor = assetManager.openFd(modelPath)
+        val inputStream = FileInputStream(fileDescriptor.fileDescriptor)
+        val fileChannel = inputStream.channel
+        val startOffset = fileDescriptor.startOffset
+        val declaredLength = fileDescriptor.declaredLength
+        return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength)
+    }
+
+    // Function to load and preprocess CSV data from assets
+    private fun loadCSVData(assetManager: AssetManager, csvPath: String): Array<FloatArray> {
+        val inputStream = assetManager.open(csvPath)
+        val reader = CSVReader(InputStreamReader(inputStream))
+        val inputList = ArrayList<FloatArray>()
+
+        // Read and ignore the header row
+        reader.readNext() // This will skip the header
+
+        reader.forEach { row ->
+            // Check if the row is not empty and has at least 7 elements (counter + 6 values)
+            if (row.isNotEmpty() && row.size >= 7) {
+                try {
+                    // Skip the first element (the counter) and map the rest to Float
+                    val floatValues = row.drop(1).map {
+                        if (it.isEmpty()) {
+                            throw NumberFormatException("Empty string found")
+                        }
+                        it.toFloat()
+                    }.toFloatArray()
+                    inputList.add(floatValues)
+                } catch (e: NumberFormatException) {
+                    Log.e("CSV Loading Error", "Error parsing row: ${row.joinToString()} - ${e.message}")
+                }
+            } else {
+                Log.w("CSV Warning", "Row skipped due to invalid format: ${row.joinToString()}")
+            }
+        }
+
+        // Log the loaded data
+        Log.d("CSV Data", "Loaded CSV Data: ${inputList.joinToString("\n") { it.contentToString() }}")
+
+        // Reshape into 50x6 input if needed
+        return inputList.take(50).toTypedArray()
+    }
 
     fun setupCharts() {
         respeckChart = findViewById(R.id.respeck_chart)
@@ -252,6 +322,7 @@ class LiveDataActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        interpreter.close()
         unregisterReceiver(respeckLiveUpdateReceiver)
         unregisterReceiver(thingyLiveUpdateReceiver)
         looperRespeck.quit()
