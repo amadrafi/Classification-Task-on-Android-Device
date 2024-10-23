@@ -24,9 +24,10 @@ import com.specknet.pdiotapp.utils.ThingyLiveData
 import kotlin.collections.ArrayList
 import org.tensorflow.lite.Interpreter
 import com.opencsv.CSVReader
-import java.io.File
 import java.io.FileInputStream
 import java.io.InputStreamReader
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
 
@@ -77,11 +78,10 @@ class LiveDataActivity : AppCompatActivity() {
         val inputData = loadCSVData(assets, "data.csv")
 
         // Run inference
-        val output = Array(1) { FloatArray(6) } // Adjust based on your model's output shape
-        interpreter.run(inputData, output)
+        val result = runBatchInference(interpreter, inputData)
 
-        // Log the output
-        Log.d("Inference Output", "Output: ${output.contentToString()}")
+// Log the result (assuming the output is a single float)
+        Log.d("TFLite Result", "Inference result: ${result.joinToString(", ")}")
 
         // set up the broadcast receiver
         respeckLiveUpdateReceiver = object : BroadcastReceiver() {
@@ -141,14 +141,41 @@ class LiveDataActivity : AppCompatActivity() {
                 }
             }
         }
-
         // register receiver on another thread
         val handlerThreadThingy = HandlerThread("bgThreadThingyLive")
         handlerThreadThingy.start()
         looperThingy = handlerThreadThingy.looper
         val handlerThingy = Handler(looperThingy)
         this.registerReceiver(thingyLiveUpdateReceiver, filterTestThingy, null, handlerThingy)
+    }
 
+    fun prepareBatchInputData(inputList: List<FloatArray>): ByteBuffer {
+        // Check if the list has exactly 50 samples and each sample has 6 float values
+        require(inputList.size == 50 && inputList.all { it.size == 6 }) {}
+
+        // Allocate the buffer to hold 50 samples with 6 float values each
+        val byteBuffer = ByteBuffer.allocateDirect(50 * 6 * 4) // 50 samples * 6 floats * 4 bytes per float
+        byteBuffer.order(ByteOrder.nativeOrder())
+
+        // Add all the float values from the input list into the buffer
+        inputList.forEach { floatArray ->
+            floatArray.forEach { value ->
+                byteBuffer.putFloat(value)
+            }
+        }
+
+        return byteBuffer
+    }
+
+    fun runBatchInference(interpreter: Interpreter, inputList: List<FloatArray>): FloatArray {
+        // Prepare the input data as a ByteBuffer
+        val inputBuffer = prepareBatchInputData(inputList)
+
+        val outputBuffer = Array(1) { FloatArray(7) }
+
+        interpreter.run(inputBuffer, outputBuffer)
+
+        return outputBuffer[0]
     }
 
     private fun loadModelFile(assetManager: AssetManager, modelPath: String): MappedByteBuffer {
@@ -161,7 +188,7 @@ class LiveDataActivity : AppCompatActivity() {
     }
 
     // Function to load and preprocess CSV data from assets
-    private fun loadCSVData(assetManager: AssetManager, csvPath: String): Array<FloatArray> {
+    private fun loadCSVData(assetManager: AssetManager, csvPath: String): List<FloatArray> {
         val inputStream = assetManager.open(csvPath)
         val reader = CSVReader(InputStreamReader(inputStream))
         val inputList = ArrayList<FloatArray>()
@@ -174,7 +201,7 @@ class LiveDataActivity : AppCompatActivity() {
             if (row.isNotEmpty() && row.size >= 7) {
                 try {
                     // Skip the first element (the counter) and map the rest to Float
-                    val floatValues = row.drop(1).map {
+                    val floatValues = row.drop(2).dropLast(1).map {
                         if (it.isEmpty()) {
                             throw NumberFormatException("Empty string found")
                         }
@@ -192,8 +219,15 @@ class LiveDataActivity : AppCompatActivity() {
         // Log the loaded data
         Log.d("CSV Data", "Loaded CSV Data: ${inputList.joinToString("\n") { it.contentToString() }}")
 
+        val modifiedList = inputList.take(50)
+
+        val numRows = modifiedList.size
+        val numCol = modifiedList[0].size
+
+        Log.d("Shape of csv", "$numRows x $numCol")
+
         // Reshape into 50x6 input if needed
-        return inputList.take(50).toTypedArray()
+        return modifiedList
     }
 
     fun setupCharts() {
