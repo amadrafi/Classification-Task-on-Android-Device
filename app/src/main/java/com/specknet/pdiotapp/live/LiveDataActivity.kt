@@ -11,6 +11,7 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
 import android.util.Log
+import android.widget.TextView
 import androidx.core.content.ContextCompat
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.data.Entry
@@ -51,6 +52,16 @@ class LiveDataActivity : AppCompatActivity() {
     lateinit var respeckChart: LineChart
     lateinit var thingyChart: LineChart
 
+    val activities = mapOf(
+        "Ascending stairs" to 0,
+        "Shuffle walking" to 1,
+        "Sitting/Standing" to 2,
+        "Misc movements" to 3,
+        "Normal walking" to 4,
+        "Lying down" to 5,
+        "Descending stairs" to 6
+    )
+
     // global broadcast receiver so we can unregister it
     lateinit var respeckLiveUpdateReceiver: BroadcastReceiver
     lateinit var thingyLiveUpdateReceiver: BroadcastReceiver
@@ -75,10 +86,21 @@ class LiveDataActivity : AppCompatActivity() {
         Log.d("Model status", "Success")
 
         // Load and preprocess the CSV data
-        val inputData = loadCSVData(assets, "data.csv")
+        val inputData = loadCSVData(assets, "stairs.csv")
 
         // Run inference
         val result = runBatchInference(interpreter, inputData)
+        val activityText: TextView = findViewById(R.id.inference_output)
+
+        val maxIndex = result.indices.maxByOrNull { result[it] } ?: -1
+
+        // Step 3: Get the corresponding activity
+        val activity = if (maxIndex != -1) {
+            activities.entries.firstOrNull { it.value == maxIndex }?.key ?: "Unknown activity"
+        } else {
+            "No activity detected"
+        }
+        activityText.text = "Activity: $activity"
 
 // Log the result (assuming the output is a single float)
         Log.d("TFLite Result", "Inference result: ${result.joinToString(", ")}")
