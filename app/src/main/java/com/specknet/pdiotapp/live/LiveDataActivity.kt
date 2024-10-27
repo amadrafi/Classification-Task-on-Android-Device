@@ -52,6 +52,9 @@ class LiveDataActivity : AppCompatActivity() {
     lateinit var respeckChart: LineChart
     lateinit var thingyChart: LineChart
 
+    val respeckLiveDataBuffer: MutableList<FloatArray> = ArrayList()
+    val thingyLiveDataBuffer: MutableList<FloatArray> = ArrayList()
+
     val activities = mapOf(
         "Ascending stairs" to 0,
         "Shuffle walking" to 1,
@@ -78,32 +81,10 @@ class LiveDataActivity : AppCompatActivity() {
 
         setupCharts()
 
-        // Step 1: Load the TFLite model
-        // Load the TensorFlow Lite model
         val model = loadModelFile(assets, "model.tflite")
         interpreter = Interpreter(model)
 
         Log.d("Model status", "Success")
-
-        // Load and preprocess the CSV data
-        val inputData = loadCSVData(assets, "stairs.csv")
-
-        // Run inference
-        val result = runBatchInference(interpreter, inputData)
-        val activityText: TextView = findViewById(R.id.inference_output)
-
-        val maxIndex = result.indices.maxByOrNull { result[it] } ?: -1
-
-        // Step 3: Get the corresponding activity
-        val activity = if (maxIndex != -1) {
-            activities.entries.firstOrNull { it.value == maxIndex }?.key ?: "Unknown activity"
-        } else {
-            "No activity detected"
-        }
-        activityText.text = "Activity: $activity"
-
-// Log the result (assuming the output is a single float)
-        Log.d("TFLite Result", "Inference result: ${result.joinToString(", ")}")
 
         // set up the broadcast receiver
         respeckLiveUpdateReceiver = object : BroadcastReceiver() {
@@ -124,9 +105,19 @@ class LiveDataActivity : AppCompatActivity() {
                     val y = liveData.accelY
                     val z = liveData.accelZ
 
+                    val gX = liveData.gyro.x
+                    val gY = liveData.gyro.y
+                    val gZ = liveData.gyro.z
+
                     time += 1
                     updateGraph("respeck", x, y, z)
 
+                    val sample = floatArrayOf(x, y, z, gX, gY, gZ)
+                    addLiveData(sample, isRespeck = true)
+
+                    if (respeckLiveDataBuffer.size == 50) {
+                        predictActivity(respeckLiveDataBuffer)
+                    }
                 }
             }
         }
@@ -157,9 +148,19 @@ class LiveDataActivity : AppCompatActivity() {
                     val y = liveData.accelY
                     val z = liveData.accelZ
 
+                    val gX = liveData.gyro.x
+                    val gY = liveData.gyro.y
+                    val gZ = liveData.gyro.z
+
                     time += 1
                     updateGraph("thingy", x, y, z)
 
+                    val sample = floatArrayOf(x, y, z, gX, gY, gZ)
+                    addLiveData(sample, isRespeck = false)
+
+                    if (thingyLiveDataBuffer.size == 50) {
+                        predictActivity(thingyLiveDataBuffer)
+                    }
                 }
             }
         }
@@ -169,6 +170,29 @@ class LiveDataActivity : AppCompatActivity() {
         looperThingy = handlerThreadThingy.looper
         val handlerThingy = Handler(looperThingy)
         this.registerReceiver(thingyLiveUpdateReceiver, filterTestThingy, null, handlerThingy)
+    }
+
+    fun predictActivity(inputData: List<FloatArray>){
+
+        if (!::interpreter.isInitialized) {
+            throw IllegalStateException("TensorFlow Lite interpreter is not initialized.")
+        }
+        // Run inference
+        val result = runBatchInference(interpreter, inputData)
+        val activityText: TextView = findViewById(R.id.inference_output)
+
+        val maxIndex = result.indices.maxByOrNull { result[it] } ?: -1
+
+        //Get the corresponding activity
+        val activity = if (maxIndex != -1) {
+            activities.entries.firstOrNull { it.value == maxIndex }?.key ?: "Unknown activity"
+        } else {
+            "No activity detected"
+        }
+        activityText.text = "Activity: $activity"
+
+        Log.d("TFLite Result", "Inference result: ${result.joinToString(", ")}")
+
     }
 
     fun prepareBatchInputData(inputList: List<FloatArray>): ByteBuffer {
@@ -209,48 +233,60 @@ class LiveDataActivity : AppCompatActivity() {
         return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength)
     }
 
-    // Function to load and preprocess CSV data from assets
-    private fun loadCSVData(assetManager: AssetManager, csvPath: String): List<FloatArray> {
-        val inputStream = assetManager.open(csvPath)
-        val reader = CSVReader(InputStreamReader(inputStream))
-        val inputList = ArrayList<FloatArray>()
+    fun addLiveData(newSample: FloatArray, isRespeck: Boolean) {
 
-        // Read and ignore the header row
-        reader.readNext() // This will skip the header
+        val buffer = if (isRespeck) respeckLiveDataBuffer else thingyLiveDataBuffer
 
-        reader.forEach { row ->
-            // Check if the row is not empty and has at least 7 elements (counter + 6 values)
-            if (row.isNotEmpty() && row.size >= 7) {
-                try {
-                    // Skip the first element (the counter) and map the rest to Float
-                    val floatValues = row.drop(2).dropLast(1).map {
-                        if (it.isEmpty()) {
-                            throw NumberFormatException("Empty string found")
-                        }
-                        it.toFloat()
-                    }.toFloatArray()
-                    inputList.add(floatValues)
-                } catch (e: NumberFormatException) {
-                    Log.e("CSV Loading Error", "Error parsing row: ${row.joinToString()} - ${e.message}")
-                }
-            } else {
-                Log.w("CSV Warning", "Row skipped due to invalid format: ${row.joinToString()}")
-            }
+        if (buffer.size >= 50) {
+            // Remove the oldest sample to maintain a size of 50
+            buffer.removeAt(0)
         }
-
-        // Log the loaded data
-        Log.d("CSV Data", "Loaded CSV Data: ${inputList.joinToString("\n") { it.contentToString() }}")
-
-        val modifiedList = inputList.take(50)
-
-        val numRows = modifiedList.size
-        val numCol = modifiedList[0].size
-
-        Log.d("Shape of csv", "$numRows x $numCol")
-
-        // Reshape into 50x6 input if needed
-        return modifiedList
+        // Add the new sample to the buffer
+        buffer.add(newSample)
     }
+//
+//    // Function to load and preprocess CSV data from assets
+//    private fun loadCSVData(assetManager: AssetManager, csvPath: String): List<FloatArray> {
+//        val inputStream = assetManager.open(csvPath)
+//        val reader = CSVReader(InputStreamReader(inputStream))
+//        val inputList = ArrayList<FloatArray>()
+//
+//        // Read and ignore the header row
+//        reader.readNext() // This will skip the header
+//
+//        reader.forEach { row ->
+//            // Check if the row is not empty and has at least 7 elements (counter + 6 values)
+//            if (row.isNotEmpty() && row.size >= 7) {
+//                try {
+//                    // Skip the first element (the counter) and map the rest to Float
+//                    val floatValues = row.drop(2).dropLast(1).map {
+//                        if (it.isEmpty()) {
+//                            throw NumberFormatException("Empty string found")
+//                        }
+//                        it.toFloat()
+//                    }.toFloatArray()
+//                    inputList.add(floatValues)
+//                } catch (e: NumberFormatException) {
+//                    Log.e("CSV Loading Error", "Error parsing row: ${row.joinToString()} - ${e.message}")
+//                }
+//            } else {
+//                Log.w("CSV Warning", "Row skipped due to invalid format: ${row.joinToString()}")
+//            }
+//        }
+//
+//        // Log the loaded data
+//        Log.d("CSV Data", "Loaded CSV Data: ${inputList.joinToString("\n") { it.contentToString() }}")
+//
+//        val modifiedList = inputList.take(50)
+//
+//        val numRows = modifiedList.size
+//        val numCol = modifiedList[0].size
+//
+//        Log.d("Shape of csv", "$numRows x $numCol")
+//
+//        // Reshape into 50x6 input if needed
+//        return modifiedList
+//    }
 
     fun setupCharts() {
         respeckChart = findViewById(R.id.respeck_chart)
