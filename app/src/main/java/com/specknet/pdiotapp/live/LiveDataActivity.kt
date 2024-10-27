@@ -40,17 +40,31 @@ class LiveDataActivity : AppCompatActivity() {
     lateinit var dataSet_res_accel_y: LineDataSet
     lateinit var dataSet_res_accel_z: LineDataSet
 
+    lateinit var dataSet_res_gyro_x: LineDataSet
+    lateinit var dataSet_res_gyro_y: LineDataSet
+    lateinit var dataSet_res_gyro_z: LineDataSet
+
     lateinit var dataSet_thingy_accel_x: LineDataSet
     lateinit var dataSet_thingy_accel_y: LineDataSet
     lateinit var dataSet_thingy_accel_z: LineDataSet
 
+    lateinit var dataSet_thingy_gyro_x: LineDataSet
+    lateinit var dataSet_thingy_gyro_y: LineDataSet
+    lateinit var dataSet_thingy_gyro_z: LineDataSet
+
     var time = 0f
     lateinit var allRespeckData: LineData
+    lateinit var allRespeckGyroData: LineData
 
     lateinit var allThingyData: LineData
+    lateinit var allThingyGyroData: LineData
 
     lateinit var respeckChart: LineChart
+    lateinit var respeckGyroChart: LineChart
+
     lateinit var thingyChart: LineChart
+    lateinit var thingyGyroChart: LineChart
+
 
     val respeckLiveDataBuffer: MutableList<FloatArray> = ArrayList()
     val thingyLiveDataBuffer: MutableList<FloatArray> = ArrayList()
@@ -110,7 +124,7 @@ class LiveDataActivity : AppCompatActivity() {
                     val gZ = liveData.gyro.z
 
                     time += 1
-                    updateGraph("respeck", x, y, z)
+                    updateGraph("respeck", x, y, z, gX, gY, gZ)
 
                     val sample = floatArrayOf(x, y, z, gX, gY, gZ)
                     addLiveData(sample, isRespeck = true)
@@ -153,7 +167,8 @@ class LiveDataActivity : AppCompatActivity() {
                     val gZ = liveData.gyro.z
 
                     time += 1
-                    updateGraph("thingy", x, y, z)
+                    updateGraph("thingy", x, y, z, gX, gY, gZ)
+
 
                     val sample = floatArrayOf(x, y, z, gX, gY, gZ)
                     addLiveData(sample, isRespeck = false)
@@ -292,6 +307,9 @@ class LiveDataActivity : AppCompatActivity() {
         respeckChart = findViewById(R.id.respeck_chart)
         thingyChart = findViewById(R.id.thingy_chart)
 
+        respeckGyroChart = findViewById(R.id.respeck_gyro_chart)
+        thingyGyroChart = findViewById(R.id.thingy_gyro_chart)
+//--------------------------------------------------------------------------------------------------
         // Respeck
 
         time = 0f
@@ -334,7 +352,50 @@ class LiveDataActivity : AppCompatActivity() {
         allRespeckData = LineData(dataSetsRes)
         respeckChart.data = allRespeckData
         respeckChart.invalidate()
+//--------------------------------------------------------------------------------------------------
+        // Respeck GYRO
 
+        time = 0f
+        val entries_res_gyro_x = ArrayList<Entry>()
+        val entries_res_gyro_y = ArrayList<Entry>()
+        val entries_res_gyro_z = ArrayList<Entry>()
+
+        dataSet_res_gyro_x = LineDataSet(entries_res_gyro_x, "Gyro X")
+        dataSet_res_gyro_y = LineDataSet(entries_res_gyro_y, "Gyro Y")
+        dataSet_res_gyro_z = LineDataSet(entries_res_gyro_z, "Gyro Z")
+
+        dataSet_res_gyro_x.setDrawCircles(false)
+        dataSet_res_gyro_y.setDrawCircles(false)
+        dataSet_res_gyro_z.setDrawCircles(false)
+
+        dataSet_res_gyro_x.setColor(
+            ContextCompat.getColor(
+                this,
+                R.color.red
+            )
+        )
+        dataSet_res_gyro_y.setColor(
+            ContextCompat.getColor(
+                this,
+                R.color.green
+            )
+        )
+        dataSet_res_gyro_z.setColor(
+            ContextCompat.getColor(
+                this,
+                R.color.blue
+            )
+        )
+
+        val dataSetsGyro = ArrayList<ILineDataSet>()
+        dataSetsGyro.add(dataSet_res_gyro_x)
+        dataSetsGyro.add(dataSet_res_gyro_y)
+        dataSetsGyro.add(dataSet_res_gyro_z)
+
+        allRespeckGyroData = LineData(dataSetsGyro)
+        respeckGyroChart.data = allRespeckGyroData
+        respeckGyroChart.invalidate()
+//--------------------------------------------------------------------------------------------------
         // Thingy
 
         time = 0f
@@ -377,12 +438,57 @@ class LiveDataActivity : AppCompatActivity() {
         allThingyData = LineData(dataSetsThingy)
         thingyChart.data = allThingyData
         thingyChart.invalidate()
+//--------------------------------------------------------------------------------------------------
+        // Thingy GYRO
+
+        time = 0f
+        val entries_thingy_gyro_x = ArrayList<Entry>()
+        val entries_thingy_gyro_y = ArrayList<Entry>()
+        val entries_thingy_gyro_z = ArrayList<Entry>()
+
+        dataSet_thingy_gyro_x = LineDataSet(entries_thingy_gyro_x, "Gyro X")
+        dataSet_thingy_gyro_y = LineDataSet(entries_thingy_gyro_y, "Gyro Y")
+        dataSet_thingy_gyro_z = LineDataSet(entries_thingy_gyro_z, "Gyro Z")
+
+        dataSet_thingy_gyro_x.setDrawCircles(false)
+        dataSet_thingy_gyro_y.setDrawCircles(false)
+        dataSet_thingy_gyro_z.setDrawCircles(false)
+
+        dataSet_thingy_gyro_x.setColor(
+            ContextCompat.getColor(
+                this,
+                R.color.red
+            )
+        )
+        dataSet_thingy_gyro_y.setColor(
+            ContextCompat.getColor(
+                this,
+                R.color.green
+            )
+        )
+        dataSet_thingy_gyro_z.setColor(
+            ContextCompat.getColor(
+                this,
+                R.color.blue
+            )
+        )
+
+        val dataSetsGyroThingy = ArrayList<ILineDataSet>()
+        dataSetsGyroThingy.add(dataSet_thingy_gyro_x)
+        dataSetsGyroThingy.add(dataSet_thingy_gyro_y)
+        dataSetsGyroThingy.add(dataSet_thingy_gyro_z)
+
+        allThingyGyroData = LineData(dataSetsGyroThingy)
+        thingyGyroChart.data = allThingyGyroData
+        thingyGyroChart.invalidate()
+//--------------------------------------------------------------------------------------------------
     }
 
-    fun updateGraph(graph: String, x: Float, y: Float, z: Float) {
+    fun updateGraph(graph: String, x: Float, y: Float, z: Float,  xG: Float, yG: Float, zG: Float) {
         // take the first element from the queue
         // and update the graph with it
         if (graph == "respeck") {
+            // update accelerometer charts
             dataSet_res_accel_x.addEntry(Entry(time, x))
             dataSet_res_accel_y.addEntry(Entry(time, y))
             dataSet_res_accel_z.addEntry(Entry(time, z))
@@ -394,7 +500,20 @@ class LiveDataActivity : AppCompatActivity() {
                 respeckChart.setVisibleXRangeMaximum(150f)
                 respeckChart.moveViewToX(respeckChart.lowestVisibleX + 40)
             }
+            // update gyroscope charts
+            dataSet_res_gyro_x.addEntry(Entry(time, xG))
+            dataSet_res_gyro_y.addEntry(Entry(time, yG))
+            dataSet_res_gyro_z.addEntry(Entry(time, zG))
+
+            runOnUiThread {
+                allRespeckGyroData.notifyDataChanged()
+                respeckGyroChart.notifyDataSetChanged()
+                respeckGyroChart.invalidate()
+                respeckGyroChart.setVisibleXRangeMaximum(150f)
+                respeckGyroChart.moveViewToX(respeckGyroChart.lowestVisibleX + 40)
+            }
         } else if (graph == "thingy") {
+            // update accelerometer charts
             dataSet_thingy_accel_x.addEntry(Entry(time, x))
             dataSet_thingy_accel_y.addEntry(Entry(time, y))
             dataSet_thingy_accel_z.addEntry(Entry(time, z))
@@ -406,11 +525,20 @@ class LiveDataActivity : AppCompatActivity() {
                 thingyChart.setVisibleXRangeMaximum(150f)
                 thingyChart.moveViewToX(thingyChart.lowestVisibleX + 40)
             }
+            // update gyroscope charts
+            dataSet_thingy_gyro_x.addEntry(Entry(time, xG))
+            dataSet_thingy_gyro_y.addEntry(Entry(time, yG))
+            dataSet_thingy_gyro_z.addEntry(Entry(time, zG))
+
+            runOnUiThread {
+                allThingyGyroData.notifyDataChanged()
+                thingyGyroChart.notifyDataSetChanged()
+                thingyGyroChart.invalidate()
+                thingyGyroChart.setVisibleXRangeMaximum(150f)
+                thingyGyroChart.moveViewToX(thingyGyroChart.lowestVisibleX + 40)
+            }
         }
-
-
     }
-
 
     override fun onDestroy() {
         super.onDestroy()

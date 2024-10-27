@@ -14,37 +14,82 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/thingy_graphs"
-        android:paddingTop="16dp">
+        app:layout_constraintBottom_toTopOf="@id/respeck_gyro_graphs"
+        android:paddingTop="10dp">
 
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Respeck Live Data"/>
-
-        <com.github.mikephil.charting.charts.LineChart
-            android:id="@+id/respeck_chart"
-            android:layout_width="match_parent"
-            android:layout_height="200dp"/>
+            android:text="Respeck Accelerometer Live Data"/>
 
     </LinearLayout>
-
-
-
-    <TextView
-        android:id="@+id/inference_output"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:layout_constraintTop_toBottomOf="@id/respeck_graphs"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:text="Activity: "/>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:layout_constraintTop_toBottomOf="@id/respeck_graphs"
+        android:orientation="vertical"
+        android:id="@+id/respeck_gyro_graphs"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/thingy_gyro_graphs"
+        android:paddingTop="10dp">
+
+
+        <com.github.mikephil.charting.charts.LineChart
+            android:id="@+id/respeck_chart"
+            android:layout_width="match_parent"
+            android:layout_height="150dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Respeck Gyroscope Live Data" />
+
+        <com.github.mikephil.charting.charts.LineChart
+            android:id="@+id/respeck_gyro_chart"
+            android:layout_width="match_parent"
+            android:layout_height="150dp" />
+
+    </LinearLayout>
+
+
+    <TextView
+        android:id="@+id/inference_output"
+        android:layout_width="57dp"
+        android:layout_height="25dp"
+        android:text="Activity: "
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/respeck_gyro_graphs" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/respeck_gyro_graphs"
+        app:layout_constraintBottom_toBottomOf="@id/thingy_graphs"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:id="@+id/thingy_gyro_graphs"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Thingy Gyroscope Live Data"/>
+
+        <com.github.mikephil.charting.charts.LineChart
+            android:id="@+id/thingy_gyro_chart"
+            android:layout_width="match_parent"
+            android:layout_height="150dp"/>
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/thingy_gyro_graphs"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -54,17 +99,14 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Thingy Live Data"/>
+            android:text="Thingy Accelerometer Live Data"/>
 
         <com.github.mikephil.charting.charts.LineChart
             android:id="@+id/thingy_chart"
             android:layout_width="match_parent"
-            android:layout_height="200dp"/>
-
+            android:layout_height="150dp"/>
 
     </LinearLayout>
-
-
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>
