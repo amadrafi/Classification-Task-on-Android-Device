@@ -70,13 +70,24 @@ class LiveDataActivity : AppCompatActivity() {
     val thingyLiveDataBuffer: MutableList<FloatArray> = ArrayList()
 
     val activities = mapOf(
-        "Ascending stairs" to 0,
-        "Shuffle walking" to 1,
-        "Sitting/Standing" to 2,
-        "Misc movements" to 3,
-        "Normal walking" to 4,
-        "Lying down" to 5,
-        "Descending stairs" to 6
+        "Ascending Stairs" to 0,
+        "Descending Stairs" to 1,
+        "Lying Back" to 2,
+        "Lying Left" to 3,
+        "Lying Right" to 4,
+        "Lying Stomach" to 5,
+        "Misc Movement" to 6,
+        "Normal Walking" to 7,
+        "Running" to 8,
+        "Shuffle Walking" to 9,
+        "Sitting/ Standing" to 10,
+    )
+
+    val activitiesSocial = mapOf(
+        "Breathing Normally " to 0,
+        "Coughing" to 1,
+        "Hyperventilation " to 2,
+        "Other" to 3,
     )
 
     // global broadcast receiver so we can unregister it
@@ -85,6 +96,7 @@ class LiveDataActivity : AppCompatActivity() {
     lateinit var looperRespeck: Looper
     lateinit var looperThingy: Looper
     lateinit var interpreter: Interpreter
+    lateinit var interpreter_social: Interpreter
 
     val filterTestRespeck = IntentFilter(Constants.ACTION_RESPECK_LIVE_BROADCAST)
     val filterTestThingy = IntentFilter(Constants.ACTION_THINGY_BROADCAST)
@@ -95,10 +107,13 @@ class LiveDataActivity : AppCompatActivity() {
 
         setupCharts()
 
+        val modelSocial = loadModelFile(assets, "model7910.tflite")
+        interpreter_social = Interpreter(modelSocial)
+
         val model = loadModelFile(assets, "model.tflite")
         interpreter = Interpreter(model)
 
-        Log.d("Model status", "Success")
+        Log.d("Models status", "Success")
 
         // set up the broadcast receiver
         respeckLiveUpdateReceiver = object : BroadcastReceiver() {
@@ -189,13 +204,15 @@ class LiveDataActivity : AppCompatActivity() {
 
     fun predictActivity(inputData: List<FloatArray>){
 
-        if (!::interpreter.isInitialized) {
-            throw IllegalStateException("TensorFlow Lite interpreter is not initialized.")
+        if (!::interpreter.isInitialized && !::interpreter_social.isInitialized) {
+            throw IllegalStateException("TensorFlow Lite interpreters are not initialized.")
         }
         // Run inference
-        val result = runBatchInference(interpreter, inputData)
+        val result = runBatchInference(interpreter, inputData, 11)
+        val resultSocial = runBatchInference(interpreter_social, inputData, 4)
 
         val maxIndex = result.indices.maxByOrNull { result[it] } ?: -1
+        val maxIndexSocial = resultSocial.indices.maxByOrNull { result[it] } ?: -1
 
         //Get the corresponding activity
         val activity = if (maxIndex != -1) {
@@ -203,9 +220,16 @@ class LiveDataActivity : AppCompatActivity() {
         } else {
             "No activity detected"
         }
+
+        val activitySocial = if (maxIndexSocial != -1) {
+            activitiesSocial.entries.firstOrNull { it.value == maxIndex }?.key ?: "Unknown activity"
+        } else {
+            "No activity detected"
+        }
+
         runOnUiThread {
             val activityText: TextView = findViewById(R.id.inference_output_1)
-            activityText.text = "Activity Respeck: $activity"
+            activityText.text = "Activity Respeck: $activity, $activitySocial"
         }
         Log.d("TFLite Result", "Inference result: ${result.joinToString(", ")}")
 
@@ -218,11 +242,12 @@ class LiveDataActivity : AppCompatActivity() {
             throw IllegalStateException("TensorFlow Lite interpreter is not initialized.")
         }
         // Run inference
-        val result = runBatchInference(interpreter, inputData)
+        val result = runBatchInference(interpreter, inputData, 11)
 
         val maxIndex = result.indices.maxByOrNull { result[it] } ?: -1
 
         //Get the corresponding activity
+        //-------------------------------------------------------------------------------------------------------------------------------
         val activity = if (maxIndex != -1) {
             activities.entries.firstOrNull { it.value == maxIndex }?.key ?: "Unknown activity"
         } else {
@@ -254,11 +279,11 @@ class LiveDataActivity : AppCompatActivity() {
         return byteBuffer
     }
 
-    fun runBatchInference(interpreter: Interpreter, inputList: List<FloatArray>): FloatArray {
+    fun runBatchInference(interpreter: Interpreter, inputList: List<FloatArray>, shape: Int): FloatArray {
         // Prepare the input data as a ByteBuffer
         val inputBuffer = prepareBatchInputData(inputList)
 
-        val outputBuffer = Array(1) { FloatArray(7) }
+        val outputBuffer = Array(1) { FloatArray(shape) }
 
         interpreter.run(inputBuffer, outputBuffer)
 
@@ -576,6 +601,7 @@ class LiveDataActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         interpreter.close()
+        interpreter_social.close()
         unregisterReceiver(respeckLiveUpdateReceiver)
         unregisterReceiver(thingyLiveUpdateReceiver)
         looperRespeck.quit()
