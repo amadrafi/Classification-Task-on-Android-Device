@@ -174,7 +174,7 @@ class LiveDataActivity : AppCompatActivity() {
                     addLiveData(sample, isRespeck = false)
 
                     if (thingyLiveDataBuffer.size == 50) {
-                        predictActivity(thingyLiveDataBuffer)
+                        predictActivity2(thingyLiveDataBuffer)
                     }
                 }
             }
@@ -194,7 +194,6 @@ class LiveDataActivity : AppCompatActivity() {
         }
         // Run inference
         val result = runBatchInference(interpreter, inputData)
-        val activityText: TextView = findViewById(R.id.inference_output)
 
         val maxIndex = result.indices.maxByOrNull { result[it] } ?: -1
 
@@ -204,8 +203,35 @@ class LiveDataActivity : AppCompatActivity() {
         } else {
             "No activity detected"
         }
-        activityText.text = "Activity: $activity"
+        runOnUiThread {
+            val activityText: TextView = findViewById(R.id.inference_output_1)
+            activityText.text = "Activity Respeck: $activity"
+        }
+        Log.d("TFLite Result", "Inference result: ${result.joinToString(", ")}")
 
+    }
+
+
+    fun predictActivity2(inputData: List<FloatArray>){
+
+        if (!::interpreter.isInitialized) {
+            throw IllegalStateException("TensorFlow Lite interpreter is not initialized.")
+        }
+        // Run inference
+        val result = runBatchInference(interpreter, inputData)
+
+        val maxIndex = result.indices.maxByOrNull { result[it] } ?: -1
+
+        //Get the corresponding activity
+        val activity = if (maxIndex != -1) {
+            activities.entries.firstOrNull { it.value == maxIndex }?.key ?: "Unknown activity"
+        } else {
+            "No activity detected"
+        }
+        runOnUiThread {
+            val activityText: TextView = findViewById(R.id.inference_output_2)
+            activityText.text = "Activity Thingy: $activity"
+        }
         Log.d("TFLite Result", "Inference result: ${result.joinToString(", ")}")
 
     }
@@ -494,6 +520,12 @@ class LiveDataActivity : AppCompatActivity() {
             dataSet_res_accel_z.addEntry(Entry(time, z))
 
             runOnUiThread {
+//                try {
+//                    respeckChart.notifyDataSetChanged()
+//                    respeckChart.invalidate()
+//                } catch (e: Exception) {
+//                    Log.e("ChartError", "Error updating chart at respeck1: ${e.message}")
+//                }
                 allRespeckData.notifyDataChanged()
                 respeckChart.notifyDataSetChanged()
                 respeckChart.invalidate()
@@ -531,6 +563,7 @@ class LiveDataActivity : AppCompatActivity() {
             dataSet_thingy_gyro_z.addEntry(Entry(time, zG))
 
             runOnUiThread {
+
                 allThingyGyroData.notifyDataChanged()
                 thingyGyroChart.notifyDataSetChanged()
                 thingyGyroChart.invalidate()
