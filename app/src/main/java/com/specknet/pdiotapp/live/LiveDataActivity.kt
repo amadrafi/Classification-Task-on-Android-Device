@@ -222,10 +222,15 @@ class LiveDataActivity : AppCompatActivity() {
         }
 
         val activitySocial = if (maxIndexSocial != -1) {
-            activitiesSocial.entries.firstOrNull { it.value == maxIndex }?.key ?: "Unknown activity"
-        } else {
-            "No activity detected"
-        }
+                                activitiesSocial.entries.firstOrNull { it.value == maxIndexSocial }?.key ?: "Unknown activity"
+                            } else {
+                                "No activity detected"
+                            }
+
+//        println("Debug: No matched entry found for maxIndexSocial = $maxIndexSocial")
+//        activitiesSocial.entries.forEach { entry ->
+//            println("Key: ${entry.key}, Value: ${entry.value}")
+//        }
 
         runOnUiThread {
             val activityText: TextView = findViewById(R.id.inference_output_1)
