@@ -198,15 +198,15 @@ class LiveDataActivity : AppCompatActivity() {
                     val gZ = liveData.gyro.z
 
                     time += 1
-                    updateGraph("thingy", x, y, z, gX, gY, gZ)
+//                    updateGraph("thingy", x, y, z, gX, gY, gZ)
+//
+//
+//                    val sample = floatArrayOf(x, y, z, gX, gY, gZ)
+//                    addLiveData(sample, isRespeck = false)
 
-
-                    val sample = floatArrayOf(x, y, z, gX, gY, gZ)
-                    addLiveData(sample, isRespeck = false)
-
-                    if (thingyLiveDataBuffer.size == 50) {
-                        predictActivity2(thingyLiveDataBuffer)
-                    }
+//                    if (thingyLiveDataBuffer.size == 50) {
+//                        predictActivity2(thingyLiveDataBuffer)
+//                    }
                 }
             }
         }
@@ -218,8 +218,10 @@ class LiveDataActivity : AppCompatActivity() {
         this.registerReceiver(thingyLiveUpdateReceiver, filterTestThingy, null, handlerThingy)
     }
 
+
     @RequiresApi(Build.VERSION_CODES.O)
     fun predictActivity(inputData: List<FloatArray>) {
+
         if (!::interpreter.isInitialized && !::interpreter_social.isInitialized) {
             throw IllegalStateException("TensorFlow Lite interpreters are not initialized.")
         }
@@ -264,7 +266,6 @@ class LiveDataActivity : AppCompatActivity() {
         Log.d("TFLite Result", "Inference result: ${result.joinToString(", ")}")
     }
 
-
     fun predictActivity2(inputData: List<FloatArray>){
 
         if (!::interpreter.isInitialized) {
@@ -275,18 +276,17 @@ class LiveDataActivity : AppCompatActivity() {
 
         val maxIndex = result.indices.maxByOrNull { result[it] } ?: -1
 
-        //Get the corresponding activity
-        //-------------------------------------------------------------------------------------------------------------------------------
         val activity = if (maxIndex != -1) {
             activities.entries.firstOrNull { it.value == maxIndex }?.key ?: "Unknown activity"
         } else {
             "No activity detected"
         }
-        runOnUiThread {
-            val activityText: TextView = findViewById(R.id.inference_output_2)
-            Log.d("Inference output text", "changed to $activity")
-            activityText.text = "Activity Thingy: $activity"
-        }
+
+//        runOnUiThread {
+//            val activityText: TextView = findViewById(R.id.inference_output_2)
+//            activityText.text = "Activity Thingy: $activity"
+//        }
+
         Log.d("TFLite Result", "Inference result: ${result.joinToString(", ")}")
 
     }
@@ -386,10 +386,10 @@ class LiveDataActivity : AppCompatActivity() {
 
     fun setupCharts() {
         respeckChart = findViewById(R.id.respeck_chart)
-        thingyChart = findViewById(R.id.thingy_chart)
+//        thingyChart = findViewById(R.id.thingy_chart)
 
         respeckGyroChart = findViewById(R.id.respeck_gyro_chart)
-        thingyGyroChart = findViewById(R.id.thingy_gyro_chart)
+//        thingyGyroChart = findViewById(R.id.thingy_gyro_chart)
 //--------------------------------------------------------------------------------------------------
         // Respeck
 
@@ -476,93 +476,93 @@ class LiveDataActivity : AppCompatActivity() {
         allRespeckGyroData = LineData(dataSetsGyro)
         respeckGyroChart.data = allRespeckGyroData
         respeckGyroChart.invalidate()
-//--------------------------------------------------------------------------------------------------
-        // Thingy
-
-        time = 0f
-        val entries_thingy_accel_x = ArrayList<Entry>()
-        val entries_thingy_accel_y = ArrayList<Entry>()
-        val entries_thingy_accel_z = ArrayList<Entry>()
-
-        dataSet_thingy_accel_x = LineDataSet(entries_thingy_accel_x, "Accel X")
-        dataSet_thingy_accel_y = LineDataSet(entries_thingy_accel_y, "Accel Y")
-        dataSet_thingy_accel_z = LineDataSet(entries_thingy_accel_z, "Accel Z")
-
-        dataSet_thingy_accel_x.setDrawCircles(false)
-        dataSet_thingy_accel_y.setDrawCircles(false)
-        dataSet_thingy_accel_z.setDrawCircles(false)
-
-        dataSet_thingy_accel_x.setColor(
-            ContextCompat.getColor(
-                this,
-                R.color.red
-            )
-        )
-        dataSet_thingy_accel_y.setColor(
-            ContextCompat.getColor(
-                this,
-                R.color.green
-            )
-        )
-        dataSet_thingy_accel_z.setColor(
-            ContextCompat.getColor(
-                this,
-                R.color.blue
-            )
-        )
-
-        val dataSetsThingy = ArrayList<ILineDataSet>()
-        dataSetsThingy.add(dataSet_thingy_accel_x)
-        dataSetsThingy.add(dataSet_thingy_accel_y)
-        dataSetsThingy.add(dataSet_thingy_accel_z)
-
-        allThingyData = LineData(dataSetsThingy)
-        thingyChart.data = allThingyData
-        thingyChart.invalidate()
-//--------------------------------------------------------------------------------------------------
-        // Thingy GYRO
-
-        time = 0f
-        val entries_thingy_gyro_x = ArrayList<Entry>()
-        val entries_thingy_gyro_y = ArrayList<Entry>()
-        val entries_thingy_gyro_z = ArrayList<Entry>()
-
-        dataSet_thingy_gyro_x = LineDataSet(entries_thingy_gyro_x, "Gyro X")
-        dataSet_thingy_gyro_y = LineDataSet(entries_thingy_gyro_y, "Gyro Y")
-        dataSet_thingy_gyro_z = LineDataSet(entries_thingy_gyro_z, "Gyro Z")
-
-        dataSet_thingy_gyro_x.setDrawCircles(false)
-        dataSet_thingy_gyro_y.setDrawCircles(false)
-        dataSet_thingy_gyro_z.setDrawCircles(false)
-
-        dataSet_thingy_gyro_x.setColor(
-            ContextCompat.getColor(
-                this,
-                R.color.red
-            )
-        )
-        dataSet_thingy_gyro_y.setColor(
-            ContextCompat.getColor(
-                this,
-                R.color.green
-            )
-        )
-        dataSet_thingy_gyro_z.setColor(
-            ContextCompat.getColor(
-                this,
-                R.color.blue
-            )
-        )
-
-        val dataSetsGyroThingy = ArrayList<ILineDataSet>()
-        dataSetsGyroThingy.add(dataSet_thingy_gyro_x)
-        dataSetsGyroThingy.add(dataSet_thingy_gyro_y)
-        dataSetsGyroThingy.add(dataSet_thingy_gyro_z)
-
-        allThingyGyroData = LineData(dataSetsGyroThingy)
-        thingyGyroChart.data = allThingyGyroData
-        thingyGyroChart.invalidate()
-//--------------------------------------------------------------------------------------------------
+////--------------------------------------------------------------------------------------------------
+//        // Thingy
+//
+//        time = 0f
+//        val entries_thingy_accel_x = ArrayList<Entry>()
+//        val entries_thingy_accel_y = ArrayList<Entry>()
+//        val entries_thingy_accel_z = ArrayList<Entry>()
+//
+//        dataSet_thingy_accel_x = LineDataSet(entries_thingy_accel_x, "Accel X")
+//        dataSet_thingy_accel_y = LineDataSet(entries_thingy_accel_y, "Accel Y")
+//        dataSet_thingy_accel_z = LineDataSet(entries_thingy_accel_z, "Accel Z")
+//
+//        dataSet_thingy_accel_x.setDrawCircles(false)
+//        dataSet_thingy_accel_y.setDrawCircles(false)
+//        dataSet_thingy_accel_z.setDrawCircles(false)
+//
+//        dataSet_thingy_accel_x.setColor(
+//            ContextCompat.getColor(
+//                this,
+//                R.color.red
+//            )
+//        )
+//        dataSet_thingy_accel_y.setColor(
+//            ContextCompat.getColor(
+//                this,
+//                R.color.green
+//            )
+//        )
+//        dataSet_thingy_accel_z.setColor(
+//            ContextCompat.getColor(
+//                this,
+//                R.color.blue
+//            )
+//        )
+//
+//        val dataSetsThingy = ArrayList<ILineDataSet>()
+//        dataSetsThingy.add(dataSet_thingy_accel_x)
+//        dataSetsThingy.add(dataSet_thingy_accel_y)
+//        dataSetsThingy.add(dataSet_thingy_accel_z)
+//
+//        allThingyData = LineData(dataSetsThingy)
+//        thingyChart.data = allThingyData
+//        thingyChart.invalidate()
+////--------------------------------------------------------------------------------------------------
+//        // Thingy GYRO
+//
+//        time = 0f
+//        val entries_thingy_gyro_x = ArrayList<Entry>()
+//        val entries_thingy_gyro_y = ArrayList<Entry>()
+//        val entries_thingy_gyro_z = ArrayList<Entry>()
+//
+//        dataSet_thingy_gyro_x = LineDataSet(entries_thingy_gyro_x, "Gyro X")
+//        dataSet_thingy_gyro_y = LineDataSet(entries_thingy_gyro_y, "Gyro Y")
+//        dataSet_thingy_gyro_z = LineDataSet(entries_thingy_gyro_z, "Gyro Z")
+//
+//        dataSet_thingy_gyro_x.setDrawCircles(false)
+//        dataSet_thingy_gyro_y.setDrawCircles(false)
+//        dataSet_thingy_gyro_z.setDrawCircles(false)
+//
+//        dataSet_thingy_gyro_x.setColor(
+//            ContextCompat.getColor(
+//                this,
+//                R.color.red
+//            )
+//        )
+//        dataSet_thingy_gyro_y.setColor(
+//            ContextCompat.getColor(
+//                this,
+//                R.color.green
+//            )
+//        )
+//        dataSet_thingy_gyro_z.setColor(
+//            ContextCompat.getColor(
+//                this,
+//                R.color.blue
+//            )
+//        )
+//
+//        val dataSetsGyroThingy = ArrayList<ILineDataSet>()
+//        dataSetsGyroThingy.add(dataSet_thingy_gyro_x)
+//        dataSetsGyroThingy.add(dataSet_thingy_gyro_y)
+//        dataSetsGyroThingy.add(dataSet_thingy_gyro_z)
+//
+//        allThingyGyroData = LineData(dataSetsGyroThingy)
+//        thingyGyroChart.data = allThingyGyroData
+//        thingyGyroChart.invalidate()
+////--------------------------------------------------------------------------------------------------
     }
 
     fun updateGraph(graph: String, x: Float, y: Float, z: Float,  xG: Float, yG: Float, zG: Float) {
