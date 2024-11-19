@@ -1,10 +1,19 @@
 package com.specknet.pdiotapp
 
+
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.FileOutputStream
+import java.io.InputStreamReader
+import java.io.FileInputStream
+import java.io.OutputStreamWriter
+
 import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.provider.Settings
@@ -13,6 +22,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.widget.Button
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import com.google.android.material.snackbar.Snackbar
@@ -22,7 +32,12 @@ import com.specknet.pdiotapp.live.LiveDataActivity
 import com.specknet.pdiotapp.onboarding.OnBoardingActivity
 import com.specknet.pdiotapp.utils.Constants
 import com.specknet.pdiotapp.utils.Utils
+import com.specknet.pdiotapp.model.ActivityData
 import kotlinx.android.synthetic.main.activity_main.*
+import java.io.BufferedReader
+import java.time.LocalDateTime
+import java.time.Month
+import java.time.format.DateTimeFormatter
 
 class MainActivity : AppCompatActivity() {
 
@@ -30,6 +45,7 @@ class MainActivity : AppCompatActivity() {
     lateinit var liveProcessingButton: Button
     lateinit var pairingButton: Button
     lateinit var recordButton: Button
+    lateinit var historyButton: Button // Add this line
 
     // permissions
     lateinit var permissionAlertDialog: AlertDialog.Builder
@@ -47,6 +63,7 @@ class MainActivity : AppCompatActivity() {
 
     var isUserFirstTime = false
 
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -66,6 +83,7 @@ class MainActivity : AppCompatActivity() {
         liveProcessingButton = findViewById(R.id.live_button)
         pairingButton = findViewById(R.id.ble_button)
         recordButton = findViewById(R.id.record_button)
+        historyButton = findViewById(R.id.history_button)
 
         permissionAlertDialog = AlertDialog.Builder(this)
 
@@ -94,6 +112,11 @@ class MainActivity : AppCompatActivity() {
 
         recordButton.setOnClickListener {
             val intent = Intent(this, RecordingActivity::class.java)
+            startActivity(intent)
+        }
+
+        historyButton.setOnClickListener { // Set up click listener for history
+            val intent = Intent(this, HistoryActivity::class.java)
             startActivity(intent)
         }
     }

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="16dp"
+    android:gravity="center_vertical">
+
+    <!-- Activity Name -->
+    <TextView
+        android:id="@+id/activityName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="Activity Name"
+        android:textSize="12sp"
+        android:ellipsize="end"
+        android:singleLine="true"
+        android:gravity="start"/>
+
+    <!-- Start Time -->
+    <TextView
+        android:id="@+id/startTime"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="Start Time"
+        android:textSize="14sp"
+        android:ellipsize="end"
+        android:singleLine="true"
+        android:gravity="end"/>
+
+
+    <!-- End Time -->
+    <TextView
+        android:id="@+id/endTime"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="End Time"
+        android:textSize="14sp"
+        android:ellipsize="end"
+        android:singleLine="true"
+        android:gravity="end"/>
+</LinearLayout>
