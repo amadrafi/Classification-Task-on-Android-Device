@@ -30,6 +30,9 @@ android {
     androidResources {
         noCompress 'tflite'
     }
+    buildFeatures {
+        viewBinding true
+    }
 }
 
 dependencies {

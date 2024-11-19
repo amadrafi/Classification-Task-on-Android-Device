@@ -227,6 +227,8 @@ class LiveDataActivity : AppCompatActivity() {
             "No activity detected"
         }
 
+        saveActivityPrediction(activity, activitySocial)
+
         runOnUiThread {
             val activityText: TextView = findViewById(R.id.inference_output_1)
             activityText.text = "Activity Respeck: $activity, $activitySocial"
@@ -259,6 +261,19 @@ class LiveDataActivity : AppCompatActivity() {
         }
         Log.d("TFLite Result", "Inference result: ${result.joinToString(", ")}")
 
+    }
+
+    fun saveActivityPrediction(activity: String, activitySocial: String) {
+        val fileName = "activity_predictions.txt"
+        val fileContents = "Respeck Activity: $activity, Social Activity: $activitySocial\n"
+        try {
+            openFileOutput(fileName, Context.MODE_APPEND).use {
+                it.write(fileContents.toByteArray())
+            }
+            Log.d("SaveActivity", "Saved activity prediction: $fileContents")
+        } catch (e: Exception) {
+            Log.e("SaveActivity", "Failed to save activity prediction", e)
+        }
     }
 
     fun prepareBatchInputData(inputList: List<FloatArray>): ByteBuffer {
