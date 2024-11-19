@@ -1,10 +1,12 @@
 package com.specknet.pdiotapp
 
+import android.app.DatePickerDialog
 import android.content.Context
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
+import android.widget.EditText
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
@@ -18,11 +20,19 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.Month
+import java.time.format.DateTimeParseException
+import java.util.Calendar
 
 class HistoryActivity : AppCompatActivity() {
+
+    private lateinit var recyclerView: RecyclerView
+    private lateinit var dateFilterEditText: EditText
+    private lateinit var clearHistoryButton: Button
+    private lateinit var filterButton: Button
 
     private lateinit var activityAdapter: ActivityAdapter
     private var activityDataList: MutableList<ActivityData> = mutableListOf()
@@ -33,7 +43,13 @@ class HistoryActivity : AppCompatActivity() {
         setContentView(R.layout.activity_history)
 
         // Initialize RecyclerView and Adapter
-        val recyclerView: RecyclerView = findViewById(R.id.recyclerView)
+        recyclerView = findViewById(R.id.recyclerView)
+        dateFilterEditText = findViewById(R.id.dateFilterEditText)
+        clearHistoryButton = findViewById(R.id.clearHistoryButton)
+        filterButton = findViewById(R.id.filterButton)
+        dateFilterEditText = findViewById(R.id.dateFilterEditText)
+
+
         recyclerView.layoutManager = LinearLayoutManager(this)
 
         // Load data from the file
@@ -48,6 +64,63 @@ class HistoryActivity : AppCompatActivity() {
         clearHistoryButton.setOnClickListener {
             clearActivityHistory(this)
         }
+
+        dateFilterEditText.setOnClickListener {
+            showDatePickerDialog()
+        }
+
+        filterButton.setOnClickListener {
+            val selectedDate = dateFilterEditText.text.toString()
+            if (selectedDate.isNotEmpty()) {
+                filterActivitiesByDate(selectedDate)
+            } else {
+                Toast.makeText(this, "Please select a date to filter", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun filterActivitiesByDate(selectedDate: String) {
+        try {
+            // Parse the selected date (only the date part)
+            val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+            val filterDate = LocalDate.parse(selectedDate, formatter) // No need for time part here
+
+            // Filter the activities based on the date comparison
+            val filteredList = activityDataList.filter { activity ->
+                // Assuming activity.startTime is of type LocalDateTime, so we get the date part (without time)
+                val activityDate = activity.startTime.toLocalDate()
+                activityDate.isEqual(filterDate)
+            }
+
+            // Update the adapter with the filtered list
+            activityAdapter = ActivityAdapter(filteredList)
+            recyclerView.adapter = activityAdapter
+
+            // Show feedback
+            if (filteredList.isEmpty()) {
+                Toast.makeText(this, "No activities found for the selected date", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(this, "Invalid date format", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun showDatePickerDialog() {
+        val calendar = Calendar.getInstance()
+        val year = calendar.get(Calendar.YEAR)
+        val month = calendar.get(Calendar.MONTH)
+        val day = calendar.get(Calendar.DAY_OF_MONTH)
+
+        val datePickerDialog = DatePickerDialog(this, { _, selectedYear, selectedMonth, selectedDay ->
+            // Format the selected date and set it to the EditText
+            val formattedDate = String.format("%04d-%02d-%02d", selectedYear, selectedMonth + 1, selectedDay)
+            dateFilterEditText.setText(formattedDate)
+        }, year, month, day)
+
+        datePickerDialog.show()
     }
 
     private fun clearActivityHistory(context: Context) {
