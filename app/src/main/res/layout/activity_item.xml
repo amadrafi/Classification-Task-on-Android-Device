@@ -14,7 +14,7 @@
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:text="Activity Name"
-        android:textSize="16sp"
+        android:textSize="12sp"
         android:ellipsize="end"
         android:singleLine="true"
         android:gravity="start"/>
