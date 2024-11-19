@@ -4,6 +4,8 @@ import android.content.Context
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.widget.Button
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -22,24 +24,50 @@ import java.time.Month
 
 class HistoryActivity : AppCompatActivity() {
 
+    private lateinit var activityAdapter: ActivityAdapter
+    private var activityDataList: MutableList<ActivityData> = mutableListOf()
+
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_history) // Ensure this XML exists
+        setContentView(R.layout.activity_history)
 
-        // Generate and save fake data
-        generateAndSaveFakeData(this)
-
-        // Load data from the file and display it (e.g., in a RecyclerView)
-        val activityDataList = loadDataFromFile(this)
-
+        // Initialize RecyclerView and Adapter
         val recyclerView: RecyclerView = findViewById(R.id.recyclerView)
         recyclerView.layoutManager = LinearLayoutManager(this)
 
-        activityDataList?.let {
-            // For example, print the loaded data
-            val adapter = ActivityAdapter(it)
-            recyclerView.adapter = adapter
+        // Load data from the file
+        activityDataList = (loadDataFromFile(this) ?: mutableListOf()).toMutableList()
+
+        // Set up the adapter
+        activityAdapter = ActivityAdapter(activityDataList)
+        recyclerView.adapter = activityAdapter
+
+        // Clear History Button
+        val clearHistoryButton: Button = findViewById(R.id.clearHistoryButton)
+        clearHistoryButton.setOnClickListener {
+            clearActivityHistory(this)
+        }
+    }
+
+    private fun clearActivityHistory(context: Context) {
+        try {
+            // Clear the file contents
+            val fileOutputStream: FileOutputStream = context.openFileOutput("activities_data.json", Context.MODE_PRIVATE)
+            fileOutputStream.write("[]".toByteArray()) // Clear the file by overwriting it with an empty JSON array
+            fileOutputStream.close()
+
+            // Clear the list in memory
+            activityDataList.clear()
+
+            // Notify the adapter about the data change
+            activityAdapter.notifyDataSetChanged()
+
+            // Show feedback to the user
+            Toast.makeText(this, "Activity history cleared", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(this, "Failed to clear history", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -47,22 +75,47 @@ class HistoryActivity : AppCompatActivity() {
     @RequiresApi(Build.VERSION_CODES.O)
     fun saveDataToFile(context: Context, data: List<ActivityData>) {
         try {
-            val jsonArray = JSONArray()
+            // First, try reading the existing data from the file if it exists
+            val existingData = StringBuilder()
+            try {
+                val fileInputStream = context.openFileInput("activities_data.json")
+                val inputStreamReader = InputStreamReader(fileInputStream)
+                val bufferedReader = BufferedReader(inputStreamReader)
+
+                var line: String?
+                while (bufferedReader.readLine().also { line = it } != null) {
+                    existingData.append(line)
+                }
+                fileInputStream.close()
+            } catch (e: Exception) {
+                // If the file does not exist, we just start with an empty StringBuilder
+                // (this block will be reached the first time the file is written)
+                e.printStackTrace()
+            }
+
+            // Parse the existing JSON data into a JSONArray if it's not empty
+            val jsonArray = if (existingData.isNotEmpty()) {
+                JSONArray(existingData.toString())
+            } else {
+                JSONArray()
+            }
+
             val formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
 
+            // Append new data to the existing JSON array
             for (activity in data) {
                 val jsonObject = JSONObject()
                 jsonObject.put("activity", activity.activity)
-
-                // Convert LocalDateTime to String before saving
                 jsonObject.put("start_time", activity.startTime.format(formatter))
                 jsonObject.put("end_time", activity.endTime.format(formatter))
 
                 jsonArray.put(jsonObject)
             }
 
+            // Convert the updated JSON array to string
             val jsonData = jsonArray.toString()
 
+            // Write the updated data back to the file
             val fileOutputStream: FileOutputStream = context.openFileOutput("activities_data.json", Context.MODE_PRIVATE)
             val outputStreamWriter = OutputStreamWriter(fileOutputStream)
             outputStreamWriter.write(jsonData)

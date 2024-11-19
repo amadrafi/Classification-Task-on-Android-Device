@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.res.AssetManager
+import android.os.Build
+
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Handler
@@ -12,6 +14,7 @@ import android.os.HandlerThread
 import android.os.Looper
 import android.util.Log
 import android.widget.TextView
+import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.data.Entry
@@ -25,12 +28,17 @@ import com.specknet.pdiotapp.utils.ThingyLiveData
 import kotlin.collections.ArrayList
 import org.tensorflow.lite.Interpreter
 import com.opencsv.CSVReader
+import com.specknet.pdiotapp.model.ActivityData
+import com.specknet.pdiotapp.HistoryActivity
+import org.json.JSONObject
 import java.io.FileInputStream
 import java.io.InputStreamReader
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 
 class LiveDataActivity : AppCompatActivity() {
@@ -97,13 +105,20 @@ class LiveDataActivity : AppCompatActivity() {
     lateinit var looperThingy: Looper
     lateinit var interpreter: Interpreter
     lateinit var interpreter_social: Interpreter
+    val activities_history = mutableListOf<ActivityData>()
 
+    private var activityStartTime: LocalDateTime? = null
+    private var activityEndTime: LocalDateTime? = null
+    private var previousActivity: String? = null
     val filterTestRespeck = IntentFilter(Constants.ACTION_RESPECK_LIVE_BROADCAST)
     val filterTestThingy = IntentFilter(Constants.ACTION_THINGY_BROADCAST)
 
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_live_data)
+
+        activityStartTime = LocalDateTime.now()
 
         setupCharts()
 
@@ -117,6 +132,7 @@ class LiveDataActivity : AppCompatActivity() {
 
         // set up the broadcast receiver
         respeckLiveUpdateReceiver = object : BroadcastReceiver() {
+            @RequiresApi(Build.VERSION_CODES.O)
             override fun onReceive(context: Context, intent: Intent) {
 
                 Log.i("thread", "I am running on thread = " + Thread.currentThread().name)
@@ -202,39 +218,50 @@ class LiveDataActivity : AppCompatActivity() {
         this.registerReceiver(thingyLiveUpdateReceiver, filterTestThingy, null, handlerThingy)
     }
 
-    fun predictActivity(inputData: List<FloatArray>){
-
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun predictActivity(inputData: List<FloatArray>) {
         if (!::interpreter.isInitialized && !::interpreter_social.isInitialized) {
             throw IllegalStateException("TensorFlow Lite interpreters are not initialized.")
         }
+
         // Run inference
         val result = runBatchInference(interpreter, inputData, 11)
         val resultSocial = runBatchInference(interpreter_social, inputData, 4)
 
+        // Get the corresponding activity
         val maxIndex = result.indices.maxByOrNull { result[it] } ?: -1
-        val maxIndexSocial = resultSocial.indices.maxByOrNull { result[it] } ?: -1
-
-        //Get the corresponding activity
         val activity = if (maxIndex != -1) {
             activities.entries.firstOrNull { it.value == maxIndex }?.key ?: "Unknown activity"
         } else {
             "No activity detected"
         }
 
-        val activitySocial = if (maxIndexSocial != -1) {
-            activitiesSocial.entries.firstOrNull { it.value == maxIndex }?.key ?: "Unknown activity"
-        } else {
-            "No activity detected"
+        // Only process when the activity changes
+        if (activity != previousActivity) {
+            // If an activity was already being tracked, save the end time and save the entry to file
+            activityStartTime?.let { startTime ->
+                val activityEndTime = LocalDateTime.now() // Capture end time when activity changes
+                val duration = java.time.Duration.between(startTime, activityEndTime).seconds
+
+                // Only add to the history if the duration is more than 5 seconds
+                if (duration > 5) {
+                    activities_history.add(ActivityData(previousActivity ?: "Unknown", startTime, activityEndTime))
+                    Log.d("ActivityHistory", "Added activity: ${previousActivity}, Duration: $duration seconds")
+                }
+            }
+            // Set the new activity and start time
+            previousActivity = activity
+            activityStartTime = LocalDateTime.now() // Capture start time for the new activity
+
+            // Log or update UI with the new activity
+            runOnUiThread {
+                val activityText: TextView = findViewById(R.id.inference_output_1)
+                activityText.text = "Activity Respeck: $activity"
+            }
         }
 
-        saveActivityPrediction(activity, activitySocial)
-
-        runOnUiThread {
-            val activityText: TextView = findViewById(R.id.inference_output_1)
-            activityText.text = "Activity Respeck: $activity, $activitySocial"
-        }
+        // Log the result of the inference (can be removed later)
         Log.d("TFLite Result", "Inference result: ${result.joinToString(", ")}")
-
     }
 
 
@@ -257,23 +284,11 @@ class LiveDataActivity : AppCompatActivity() {
         }
         runOnUiThread {
             val activityText: TextView = findViewById(R.id.inference_output_2)
+            Log.d("Inference output text", "changed to $activity")
             activityText.text = "Activity Thingy: $activity"
         }
         Log.d("TFLite Result", "Inference result: ${result.joinToString(", ")}")
 
-    }
-
-    fun saveActivityPrediction(activity: String, activitySocial: String) {
-        val fileName = "activity_predictions.txt"
-        val fileContents = "Respeck Activity: $activity, Social Activity: $activitySocial\n"
-        try {
-            openFileOutput(fileName, Context.MODE_APPEND).use {
-                it.write(fileContents.toByteArray())
-            }
-            Log.d("SaveActivity", "Saved activity prediction: $fileContents")
-        } catch (e: Exception) {
-            Log.e("SaveActivity", "Failed to save activity prediction", e)
-        }
     }
 
     fun prepareBatchInputData(inputList: List<FloatArray>): ByteBuffer {
@@ -613,8 +628,29 @@ class LiveDataActivity : AppCompatActivity() {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onDestroy() {
+
         super.onDestroy()
+
+        if (previousActivity != null && activityStartTime != null) {
+            activityEndTime = LocalDateTime.now() // Set end time to the current time
+
+            // Ensure both startTime and activityEndTime are non-null before adding
+            activities_history.add(
+                ActivityData(
+                    previousActivity ?: "Unknown",
+                    activityStartTime!!, // Use !! as we've checked for null
+                    activityEndTime!!
+                )
+            )
+        }
+
+        val historyActivity = HistoryActivity()
+        historyActivity.saveDataToFile(this, activities_history)
+        Log.d("Activities list", activities_history.toString())
+
+
         interpreter.close()
         interpreter_social.close()
         unregisterReceiver(respeckLiveUpdateReceiver)
