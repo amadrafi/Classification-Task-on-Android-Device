@@ -202,6 +202,8 @@ class LiveDataActivity : AppCompatActivity() {
         this.registerReceiver(thingyLiveUpdateReceiver, filterTestThingy, null, handlerThingy)
     }
 
+
+
     fun predictActivity(inputData: List<FloatArray>){
 
         if (!::interpreter.isInitialized && !::interpreter_social.isInitialized) {
@@ -235,7 +237,7 @@ class LiveDataActivity : AppCompatActivity() {
 
         runOnUiThread {
             val activityText: TextView = findViewById(R.id.inference_output_1)
-            activityText.text = "Physical and Social Signals: $activity, $activitySocial"
+            activityText.text = "Physical Signals: $activity \nSocial Signals: $activitySocial"
         }
         Log.d("TFLite Result", "Inference result: ${result.joinToString(", ")}")
 
